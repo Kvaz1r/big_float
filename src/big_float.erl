@@ -30,7 +30,7 @@
 {
   int = 0 :: integer(),
   fract = #fract_part{},
-  sign = positive ::sign()
+  sign = positive :: sign()
 }).
 
 -spec from_float(float()) -> #bigfloat{}.
@@ -168,9 +168,9 @@ to_string(#bigfloat
   },
   sign = S
 }) ->
-  Add = case S of
-          negative -> "-";
-          positive -> ""
+  Add = case (S =:= negative) and (Int =:= 0) of
+          true -> "-";
+          false -> ""
         end,
   S1 = integer_to_list(Int),
   S2 = fract_to_string(Fract, Shift),
