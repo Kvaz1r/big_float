@@ -184,13 +184,14 @@ negate(#bigfloat{int = Int, sign = negative} = BF) ->
   BF#bigfloat{int = -Int, sign = positive}.
 
 -spec compare(#bigfloat{}, #bigfloat{}) -> integer().
-compare(#bigfloat{sign = S} = A, #bigfloat{sign = S} = B) ->
+compare(#bigfloat{int = AI, fract = #fract_part{value = AF}, sign = S},
+    #bigfloat{int = BI, fract = #fract_part{value = BF}, sign = S}) ->
   if
-    A#bigfloat.int > B#bigfloat.int -> 1;
-    A#bigfloat.int < B#bigfloat.int -> -1;
+    AI > BI -> 1;
+    AI < BI -> -1;
     true -> if
-              A#bigfloat.fract > B#bigfloat.fract -> 1;
-              A#bigfloat.fract < B#bigfloat.fract -> -1;
+              AF > BF -> 1;
+              AF < BF -> -1;
               true -> 0
             end
   end;
