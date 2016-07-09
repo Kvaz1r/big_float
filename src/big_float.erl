@@ -138,8 +138,10 @@ add(#bigfloat{int = Ai, fract = Af},
 get_fract(0.0, _) -> {0, 0};
 get_fract(Float, Acc) ->
   Str = float_to_list(Float),
-  {match, [_, _, {_, N}, {I, Len}]} = re:run(Str, "(\\d)[.](\\d+)e-0?(\\d+)"),
-  T1 = string:copies("0", list_to_integer(string:substr(Str, I + 1, Len)) - 1),
+  Re = "(\\d)[.](\\d+)e-0?(\\d+)",
+  {match, [_, _, {_, N}, {I, Len}]} = re:run(Str, Re),
+  T1 = string:copies("0",
+    list_to_integer(string:substr(Str, I + 1, Len)) - 1),
   T2 = string:substr(Str, 1, 1),
   T3 = string:substr(Str, 3, N),
   get_fract_shift(string:join([T1, T2, T3], ""), Acc).
@@ -271,8 +273,8 @@ add_fract(#fract_part{value = Af, acc = Aacc, shift = As},
                                           true -> {Bf, Af, As, D - Bacc};
                                           false -> {Af, Bf, Bs, D - Aacc}
                                         end,
-  {First_Part, Second_Part} = split(fract_to_string(Split_Number, Shift), Diff),
-  C = (Number + First_Part) * pow10(Diff) + Second_Part,
+  {Part1, Part2} = split(fract_to_string(Split_Number, Shift), Diff),
+  C = (Number + Part1) * pow10(Diff) + Part2,
   F = C rem pow10(D),
   {C div pow10(D),
     #fract_part
