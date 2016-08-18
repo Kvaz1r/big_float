@@ -11,6 +11,7 @@
   create_zero/0,
   is_negate/1,
   is_zero/1,
+  is_int/1,
   add/2,
   compare/2,
   negate/1,
@@ -29,7 +30,7 @@
 -record(bigfloat,
 {
   int = 0 :: integer(),
-  fract = #fract_part{},
+  fract = #fract_part{} :: #fract_part{},
   sign = positive :: sign()
 }).
 
@@ -209,8 +210,15 @@ compare(#bigfloat{}, #bigfloat{}) ->
 -spec is_negate(#bigfloat{}) -> boolean().
 is_negate(#bigfloat{sign = S}) -> S =:= negative.
 
--spec is_zero(#bigfloat{}) -> boolean().
-is_zero(#bigfloat{sign = S}) -> S =:= zero.
+-spec is_zero(#bigfloat{} | #fract_part{}) -> boolean().
+is_zero(#bigfloat{sign = zero}) -> true;
+is_zero(#bigfloat{}) -> false;
+is_zero(#fract_part{value = 0}) -> true;
+is_zero(#fract_part{}) -> false.
+
+-spec is_int(#bigfloat{}) -> boolean().
+is_int(#bigfloat{fract = #fract_part{value = 0}}) -> true;
+is_int(#bigfloat{}) -> false.
 
 -spec create_zero() -> #bigfloat{}.
 create_zero() ->
