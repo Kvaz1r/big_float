@@ -65,20 +65,24 @@ from_string(Str) ->
                     1 -> [hd(List), ""];
                     2 -> List
                   end,
-      Acc = length(Temp),
-      {F, Shift} = get_fract_shift(Temp, Acc),
       Int = list_to_integer(I),
-      #bigfloat
-      {
-        int = Int,
-        fract = #fract_part
-        {
-          value = F,
-          acc = Acc,
-          shift = Shift
-        },
-        sign = sign_char(hd(Str))
-      }
+      case is_zerostring(Temp) of
+        true -> from_int(Int);
+        false ->
+          Acc = length(Temp),
+          {F, Shift} = get_fract_shift(Temp, Acc),
+          #bigfloat
+          {
+            int = Int,
+            fract = #fract_part
+            {
+              value = F,
+              acc = Acc,
+              shift = Shift
+            },
+            sign = sign_char(hd(Str))
+          }
+      end
   end.
 
 -spec from_int(integer()) -> #bigfloat{}.
