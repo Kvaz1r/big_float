@@ -12,6 +12,9 @@
   is_negate/1,
   is_zero/1,
   is_int/1,
+  set_int/2,
+  set_fract/2,
+  set_sign/2,
   add/2,
   compare/2,
   negate/1,
@@ -231,6 +234,25 @@ create_zero() ->
     fract = create_zero_fract(),
     sign = zero
   }.
+
+-spec set_int(#bigfloat{}, number()) -> #bigfloat{}.
+set_int(X = #bigfloat{}, Number) ->
+  case get_sign(Number) of
+    zero -> X#bigfloat{int = Number};
+    Other -> X#bigfloat{int = Number, sign = Other}
+  end.
+
+-spec set_sign(#bigfloat{}, sign()) -> #bigfloat{}.
+set_sign(X = #bigfloat{}, Sign) ->
+  X#bigfloat{sign = Sign}.
+
+-spec set_fract(#bigfloat{}, non_neg_integer() | #fract_part{})
+      -> #bigfloat{}.
+set_fract(X = #bigfloat{}, Number) when is_integer(Number), Number >= 0 ->
+  F = #fract_part{value = Number, acc = length(integer_to_list(Number))},
+  X#bigfloat{fract = F};
+set_fract(X = #bigfloat{}, F = #fract_part{}) ->
+  X#bigfloat{fract = F}.
 
 -spec get_sign(number()) -> sign().
 get_sign(0) -> zero;
