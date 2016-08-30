@@ -16,6 +16,7 @@
   set_fract/2,
   set_sign/2,
   add/2,
+  mul/2,
   compare/2,
   negate/1,
   to_string/1
@@ -142,6 +143,46 @@ add(#bigfloat{int = Ai, fract = Af},
     sign = get_sign(Int)
   }.
 
+-spec mul(#bigfloat{}, #bigfloat{}) -> #bigfloat{}.
+mul(#bigfloat{sign = zero} = Z, #bigfloat{}) -> Z;
+mul(#bigfloat{}, #bigfloat{sign = zero} = Z) -> Z;
+mul(#bigfloat{int = AInt, fract = #fract_part{value = 0}},
+    #bigfloat{int = BInt, fract = #fract_part{value = 0}}) ->
+  from_int(AInt * BInt);
+mul(#bigfloat{sign = S} = A, #bigfloat{sign = S} = B) ->
+  mul(A, B, positive);
+mul(#bigfloat{} = A, #bigfloat{} = B) ->
+  mul(A, B, negative).
+
+-spec mul(#bigfloat{}, #bigfloat{}, sign()) -> #bigfloat{}.
+mul(
+    #bigfloat{int = AInt, fract = #fract_part{value = AF, acc = AL}},
+    #bigfloat{int = BInt, fract = #fract_part{value = BF, acc = BL}},
+    Sign) ->
+  {I1, F1} = split_number(AInt * BF, BL),
+  {I2, F2} = split_number(BInt * AF, AL),
+  Temp1 = case is_zero(F1) of
+            true -> create_zero();
+            false -> set_sign(set_fract(create_zero(), F1), positive)
+          end,
+  Temp2 = case is_zero(F2) of
+            true -> create_zero();
+            false -> set_sign(set_fract(create_zero(), F2), positive)
+          end,
+  Temp3 = if
+            AF =:= 0; BF =:= 0 -> create_zero();
+            true ->
+              set_sign(set_fract(create_zero(),
+                create_fract(AF * BF, AL + BL)), positive)
+          end,
+  BNumber = add_list([Temp1, Temp2, Temp3]),
+  #bigfloat
+  {
+    int = AInt * BInt + I1 + I2 + get_int(BNumber),
+    fract = get_fract(BNumber),
+    sign = Sign
+  }.
+
 -spec get_fract(float(), pos_integer()) -> {pos_integer(), pos_integer()}.
 get_fract(0.0, _) -> {0, 0};
 get_fract(Float, Acc) ->
@@ -246,13 +287,22 @@ set_int(X = #bigfloat{}, Number) ->
 set_sign(X = #bigfloat{}, Sign) ->
   X#bigfloat{sign = Sign}.
 
--spec set_fract(#bigfloat{}, non_neg_integer() | #fract_part{})
-      -> #bigfloat{}.
+-spec set_fract
+    (#bigfloat{}, non_neg_integer()) -> #bigfloat{};
+    (#bigfloat{}, #fract_part{}) -> #bigfloat{}.
 set_fract(X = #bigfloat{}, Number) when is_integer(Number), Number >= 0 ->
   F = #fract_part{value = Number, acc = length(integer_to_list(Number))},
   X#bigfloat{fract = F};
 set_fract(X = #bigfloat{}, F = #fract_part{}) ->
   X#bigfloat{fract = F}.
+
+-spec get_fract(#bigfloat{}) -> #fract_part{}.
+get_fract(#bigfloat{fract = R}) -> R.
+
+-spec get_int(#bigfloat{}) -> integer().
+get_int(#bigfloat{sign = zero}) -> 0;
+get_int(#bigfloat{int = V, sign = negative}) -> -abs(V);
+get_int(#bigfloat{int = V}) -> V.
 
 -spec get_sign(number()) -> sign().
 get_sign(0) -> zero;
@@ -274,13 +324,24 @@ fract_to_string(F, 0) ->
 fract_to_string(F, Shift) ->
   string:concat(string:copies("0", Shift), integer_to_list(F)).
 
--spec split(string(), non_neg_integer()) -> {integer(), integer()}.
-split(Str, 0) ->
+-spec split
+    (string(), non_neg_integer(), number) ->
+  {non_neg_integer(), non_neg_integer()};
+    (string(), non_neg_integer(), string) ->
+  {string(), string()}.
+split(Str, 0, number) ->
   {list_to_integer(Str), 0};
-split(Str, Pos) ->
+split(Str, Pos, Type) ->
   Count = length(Str) - Pos,
-  {list_to_integer(string:substr(Str, 1, Count)),
-    list_to_integer(string:substr(Str, Count + 1, Pos))}.
+  First = string:substr(Str, 1, Count),
+  Second = string:substr(Str, Count + 1, Pos),
+  case Type of
+    string -> {First, Second};
+    number -> case First of
+                [] -> {0, list_to_integer(Second)};
+                _ -> {list_to_integer(First), list_to_integer(Second)}
+              end
+  end.
 
 -spec is_zerostring(string()) -> boolean().
 is_zerostring(Str) ->
@@ -303,11 +364,11 @@ set_value(#fract_part{} = N, Value) ->
 add_fract(#fract_part{value = Af, acc = Aacc, shift = As},
     #fract_part{value = Bf, acc = Bacc, shift = Bs}) ->
   D = max(Aacc, Bacc),
-  {Number, Split_Number, Shift, Diff} = case D =:= Aacc of
-                                          true -> {Bf, Af, As, D - Bacc};
-                                          false -> {Af, Bf, Bs, D - Aacc}
-                                        end,
-  {Part1, Part2} = split(fract_to_string(Split_Number, Shift), Diff),
+  {Number, S_Number, Shift, Diff} = case D =:= Aacc of
+                                      true -> {Bf, Af, As, D - Bacc};
+                                      false -> {Af, Bf, Bs, D - Aacc}
+                                    end,
+  {Part1, Part2} = split(fract_to_string(S_Number, Shift), Diff, number),
   C = (Number + Part1) * pow10(Diff) + Part2,
   F = C rem pow10(D),
   {C div pow10(D),
@@ -317,3 +378,57 @@ add_fract(#fract_part{value = Af, acc = Aacc, shift = As},
       acc = D,
       shift = D - length(integer_to_list(F))
     }}.
+
+-spec add_list(list(#bigfloat{})) -> #bigfloat{}.
+add_list(List) ->
+  lists:foldl(fun(El, Acc) ->
+    add(Acc, El) end, create_zero(), List).
+
+-spec split_number(non_neg_integer(), non_neg_integer())
+      -> {non_neg_integer(), #fract_part{}}.
+split_number(0, _) -> {0, create_zero_fract()};
+split_number(Number, Index) ->
+  Str = integer_to_list(Number),
+  Length = length(Str),
+  if
+    Length =:= Index -> {0, create_fract(Number, 0, Index)};
+    Length > Index ->
+      {W, F} = split(Str, Index, string),
+      Whole = list_to_integer(W),
+      Value = list_to_integer(F),
+      IsZero = fun(X) -> X =:= $0 end,
+      {Whole, create_fract(Value, count_first(F, IsZero), Index)};
+    Length < Index ->
+      {0, create_fract(Number, Index - Length, Index)}
+  end.
+
+-spec count_first(list(T), fun((Elem :: T) -> boolean()))
+      -> non_neg_integer().
+count_first(List, Pred) ->
+  count_first(List, Pred, 0).
+
+-spec count_first(list(T), fun((Elem :: T) -> boolean()), non_neg_integer())
+      -> non_neg_integer().
+count_first([], _, Acc) -> Acc;
+count_first([H | T], Pred, Acc) ->
+  case Pred(H) of
+    true -> count_first(T, Pred, Acc + 1);
+    false -> Acc
+  end.
+
+-spec create_fract(non_neg_integer(), non_neg_integer())
+      -> #fract_part{}.
+create_fract(0, _) -> create_zero_fract();
+create_fract(Number, Length) ->
+  Str = integer_to_list(Number),
+  create_fract(Number, Length - length(Str), Length).
+
+-spec create_fract(non_neg_integer(), non_neg_integer(), non_neg_integer())
+      -> #fract_part{}.
+create_fract(Number, Shift, Length) ->
+  #fract_part
+  {
+    value = Number,
+    acc = Length,
+    shift = Shift
+  }.
