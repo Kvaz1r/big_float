@@ -4,10 +4,8 @@
 
 %% API
 -export([
-  from_float/1,
-  from_float/2,
-  from_string/1,
-  from_int/1,
+  new/1,
+  new/2,
   create_zero/0,
   is_negate/1,
   is_zero/1,
@@ -38,13 +36,20 @@
   sign = positive :: sign()
 }).
 
--spec from_float(float()) -> #bigfloat{}.
-from_float(Float) ->
-  from_float(Float, 6).
+-spec new(integer()) -> #bigfloat{};
+    (float()) -> #bigfloat{};
+    (string()) -> #bigfloat{}.
+new(0) -> create_zero();
+new(Int) when is_integer(Int) -> from_int(Int);
+new(Float) when is_float(Float) -> new(Float, 6);
+new(String) ->
+  case io_lib:printable_list(String) of
+    true -> from_string(String)
+  end.
 
--spec from_float(float(), pos_integer()) -> #bigfloat{}.
-from_float(0.0, _) -> create_zero();
-from_float(Float, Acc) when Acc >= 0, is_float(Float) ->
+-spec new(float(), pos_integer()) -> #bigfloat{}.
+new(0.0, _) -> create_zero();
+new(Float, Acc) when Acc >= 0, is_float(Float) ->
   Int = trunc(Float),
   {F, S} = get_fract(abs(Float - Int), Acc),
   #bigfloat
@@ -90,8 +95,7 @@ from_string(Str) ->
   end.
 
 -spec from_int(integer()) -> #bigfloat{}.
-from_int(0) -> create_zero();
-from_int(Int) when is_integer(Int) ->
+from_int(Int) ->
   #bigfloat
   {
     int = Int,
