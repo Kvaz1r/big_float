@@ -54,5 +54,18 @@ add_test() ->
   N6 = big_float:from_string("10.899"),
   ?assert(big_float:is_zero(big_float:add(N5,N6))).
 
+mul_test() ->
+  Pi = big_float:from_string("3.14159265358979323846"),
+  R = big_float:from_string("123212"),
+  R2 = big_float:mul(R,R),
+  R3 = big_float:mul(big_float:from_int(4),R2),
+  ?assertEqual(big_float:from_string("190772547167.88087896520326106496"),
+    big_float:mul(R3,Pi)),
+  N3 = big_float:from_int(25),
+  N4 = big_float:from_string("0.001"),
+  ?assertEqual(big_float:from_string("0.025"),
+    big_float:mul(N3, N4)).
+
+
 
 
