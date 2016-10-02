@@ -384,9 +384,11 @@ add_list(List) ->
   lists:foldl(fun(El, Acc) ->
     add(Acc, El) end, create_zero(), List).
 
--spec split_number(non_neg_integer(), non_neg_integer())
+-spec split_number(integer(), non_neg_integer())
       -> {non_neg_integer(), #fract_part{}}.
 split_number(0, _) -> {0, create_zero_fract()};
+split_number(N, Index) when N < 0 ->
+  split_number(abs(N), Index);
 split_number(Number, Index) ->
   Str = integer_to_list(Number),
   Length = length(Str),
